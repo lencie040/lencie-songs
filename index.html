@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lencie 自作曲DB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f6f4fb; --panel: #ffffff; --panel2: #efecf7; --line: #dcd7ea;
+  --text: #221d33; --sub: #6d6685; --accent: #7b4dff; --accent2: #ff4d8d;
+  --shadow: 0 2px 10px rgba(40, 20, 90, .08);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121019; --panel: #1b1825; --panel2: #252133; --line: #322d44;
+    --text: #ece9f6; --sub: #9a93b3; --accent: #9d7bff; --accent2: #ff6fa3;
+    --shadow: 0 2px 12px rgba(0, 0, 0, .4);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121019; --panel: #1b1825; --panel2: #252133; --line: #322d44;
+  --text: #ece9f6; --sub: #9a93b3; --accent: #9d7bff; --accent2: #ff6fa3;
+  --shadow: 0 2px 12px rgba(0, 0, 0, .4);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", system-ui, sans-serif;
+  font-size: 14px; padding-bottom: 110px;
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+
+header { padding: 22px 0 10px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+header h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: .02em; }
+header h1 span { background: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+header .meta { color: var(--sub); font-size: 12px; }
+header .spacer { flex: 1; }
+.iconbtn { border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 6px 10px; }
+.iconbtn:hover { border-color: var(--accent); }
+.iconbtn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 6px 0 14px; }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; box-shadow: var(--shadow); }
+.stat b { font-size: 22px; display: block; }
+.stat small { color: var(--sub); }
+.rankbar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 6px; background: var(--panel2); }
+.rankbar i { display: block; height: 100%; }
+
+.toolbar { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 10px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.search { flex: 1; min-width: 200px; border: 1px solid var(--line); background: var(--panel2); border-radius: 10px; padding: 8px 12px; }
+.search:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+select { border: 1px solid var(--line); background: var(--panel2); border-radius: 10px; padding: 6px 8px; max-width: 180px; }
+.filters select.active { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.count { color: var(--sub); font-size: 12px; margin-left: auto; }
+
+/* list */
+.list { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+.song { display: grid; grid-template-columns: 40px 48px 1fr auto; gap: 12px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; cursor: pointer; transition: border-color .15s, transform .15s; }
+.song:hover { border-color: var(--accent); }
+.song.playing { border-color: var(--accent2); box-shadow: 0 0 0 1px var(--accent2) inset; }
+.song.unreg { opacity: .8; border-style: dashed; }
+.play { width: 36px; height: 36px; border-radius: 50%; border: none; background: var(--accent); color: #fff; display: grid; place-items: center; }
+.play:disabled { background: var(--panel2); color: var(--sub); cursor: not-allowed; }
+.play svg { width: 16px; height: 16px; }
+.thumb { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; background: var(--panel2); display: grid; place-items: center; font-weight: 800; color: var(--sub); font-size: 12px; }
+.title { min-width: 0; }
+.title .t { font-weight: 700; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.title .t .id { color: var(--sub); font-weight: 400; font-size: 12px; margin-right: 6px; }
+.title .y { color: var(--sub); font-size: 11px; }
+.tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px; }
+.tag { font-size: 11px; padding: 1px 7px; border-radius: 99px; background: var(--panel2); color: var(--sub); white-space: nowrap; }
+.tag.c { color: var(--accent); }
+.right { display: flex; align-items: center; gap: 14px; text-align: right; }
+.num { color: var(--sub); font-size: 12px; line-height: 1.3; }
+.num b { color: var(--text); font-size: 13px; }
+.rank { min-width: 40px; text-align: center; font-weight: 800; font-size: 16px; padding: 4px 6px; border-radius: 8px; color: #fff; }
+
+/* cards */
+.list.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.list.cards .song { grid-template-columns: 1fr; padding: 0; overflow: hidden; gap: 0; position: relative; }
+.list.cards .thumb { width: 100%; height: auto; aspect-ratio: 1; border-radius: 0; font-size: 34px; }
+.list.cards .play { position: absolute; top: 8px; left: 8px; }
+.list.cards .title { padding: 8px 10px 0; }
+.list.cards .right { padding: 6px 10px 10px; justify-content: space-between; }
+.list.cards .rank { position: absolute; top: 8px; right: 8px; }
+
+/* detail */
+.overlay { position: fixed; inset: 0; background: rgba(10, 5, 25, .5); display: none; z-index: 20; }
+.overlay.open { display: block; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 100%); background: var(--panel); border-left: 1px solid var(--line); z-index: 21; transform: translateX(100%); transition: transform .2s; overflow-y: auto; padding: 18px 18px 120px; }
+.drawer.open { transform: none; }
+.drawer h2 { margin: 6px 0 2px; font-size: 22px; }
+.drawer .y { color: var(--sub); font-size: 12px; }
+.drawer .jacket { width: 100%; border-radius: 12px; margin: 12px 0; display: block; }
+.drawer .close { float: right; }
+.versions { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
+.ver { display: flex; align-items: center; gap: 10px; background: var(--panel2); border-radius: 10px; padding: 6px 10px; }
+.ver .play { width: 30px; height: 30px; }
+.ver span { flex: 1; font-size: 12px; color: var(--sub); word-break: break-all; }
+.ver a { font-size: 12px; color: var(--accent); }
+dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; margin: 12px 0; }
+dt { color: var(--sub); font-size: 12px; }
+dt[title] { text-decoration: underline dotted; cursor: help; }
+dd { margin: 0; word-break: break-word; }
+.note { background: var(--panel2); border-radius: 10px; padding: 10px 12px; line-height: 1.6; white-space: pre-wrap; }
+.warn { color: var(--accent2); font-size: 12px; }
+
+/* player */
+.player { position: fixed; left: 0; right: 0; bottom: 0; background: var(--panel); border-top: 1px solid var(--line); z-index: 30; box-shadow: 0 -4px 20px rgba(0, 0, 0, .15); }
+.player .wrap { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px 16px; }
+.now { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.now .thumb { width: 44px; height: 44px; flex: none; }
+.now div { min-width: 0; }
+.now .t { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.now .y { color: var(--sub); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctrls { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.ctrls .btns { display: flex; gap: 6px; align-items: center; }
+.ctrls .btns button { background: none; border: none; padding: 4px; border-radius: 8px; color: var(--sub); display: grid; place-items: center; }
+.ctrls .btns button:hover { color: var(--text); }
+.ctrls .btns button.on { color: var(--accent); }
+.ctrls .btns .main { background: var(--accent); color: #fff; width: 40px; height: 40px; border-radius: 50%; }
+.ctrls .btns .main:hover { color: #fff; }
+.ctrls svg { width: 18px; height: 18px; }
+#repBtn[data-one="1"]::after { content: '1'; position: absolute; right: 0; bottom: 0; font-size: 9px; font-weight: 800; }
+.seek { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--sub); width: min(460px, 50vw); }
+input[type=range] { accent-color: var(--accent); flex: 1; }
+.vol { display: flex; justify-content: flex-end; align-items: center; gap: 6px; }
+.vol input { max-width: 110px; }
+.empty { text-align: center; color: var(--sub); padding: 40px; }
+
+@media (max-width: 720px) {
+  .song { grid-template-columns: 36px 1fr auto; }
+  .list:not(.cards) .song .thumb { display: none; }
+  .right .num { display: none; }
+  .player .wrap { grid-template-columns: 1fr auto; }
+  .vol { display: none; }
+  .seek { width: auto; }
+  .ctrls { grid-column: 1 / -1; grid-row: 2; }
+  .ctrls .seek { width: 100%; }
+  select { max-width: 46%; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span>Lencie</span> 自作曲DB</h1>
+    <div class="meta" id="meta"></div>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="viewBtn" title="表示切替">▦ カード</button>
+    <button class="iconbtn" id="themeBtn" title="テーマ切替">◐</button>
+  </header>
+
+  <section class="stats" id="stats"></section>
+
+  <section class="toolbar">
+    <div class="row">
+      <input class="search" id="q" type="search" placeholder="曲名・読み方・キャラ・備考で検索…（/ でフォーカス）">
+      <select id="sort"></select>
+      <button class="iconbtn" id="orderBtn" title="昇順/降順">↑</button>
+    </div>
+    <div class="row filters" id="filters"></div>
+    <div class="row">
+      <button class="iconbtn" id="playAllBtn">▶ 表示中をすべて再生</button>
+      <button class="iconbtn" id="resetBtn">条件リセット</button>
+      <span class="count" id="count"></span>
+    </div>
+  </section>
+
+  <main class="list" id="list"></main>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<aside class="drawer" id="drawer" aria-hidden="true"></aside>
+
+<footer class="player">
+  <div class="wrap">
+    <div class="now" id="now"><div class="thumb">♪</div><div><div class="t">未再生</div><div class="y">曲を選んでください</div></div></div>
+    <div class="ctrls">
+      <div class="btns">
+        <button id="shufBtn" title="シャッフル"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg></button>
+        <button id="prevBtn" title="前の曲"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+        <button id="mainBtn" class="main" title="再生/一時停止"></button>
+        <button id="nextBtn" title="次の曲"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+        <button id="repBtn" title="リピート"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></button>
+      </div>
+      <div class="seek"><span id="cur">0:00</span><input type="range" id="seek" min="0" max="1000" value="0"><span id="dur">0:00</span></div>
+    </div>
+    <div class="vol"><span>🔊</span><input type="range" id="vol" min="0" max="1" step="0.01" value="0.8"></div>
+  </div>
+</footer>
+<audio id="audio" preload="metadata"></audio>
+
+<script>
+const PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>';
+const PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
+
+// 絞り込みに使う列（CSVに存在するものだけ表示される）
+const FILTER_COLS = ['クオリティランク', '曲のジャンル', 'ゲームでのシーン例', 'モチーフキャラ', '所属世界線', '所属世界団', '作曲環境', 'オリジナル', 'ループ', '平均拍子', '作曲者'];
+const SORTS = [
+  ['ID', 'ID', 'num'], ['曲名', '曲名（読み順）', 'reading'], ['クオリティランク', 'クオリティ', 'rank'],
+  ['作曲日', '作曲日', 'date'], ['最終更新日', '最終更新日', 'date'], ['平均BPM', '平均BPM', 'num'],
+  ['最高BPM', '最高BPM', 'num'], ['モチーフキャラのストーリー内での初登場レベル', '初登場レベル', 'num'],
+  ['モチーフキャラの全界番号', '全界番号', 'num'],
+];
+const RANK_COLORS = { S: '#ff3d7f', A: '#ff8a00', B: '#f2b300', C: '#2bb673', D: '#2f9bff', E: '#8a6cff', F: '#8c8aa0' };
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const url = p => p.split('/').map(encodeURIComponent).join('/');
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('lsdb:' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('lsdb:' + k, JSON.stringify(v)); } catch {} },
+};
+
+function rankScore(r) {
+  const m = /^([SABCDEF])([+-]?)$/i.exec((r || '').trim());
+  if (!m) return -1;
+  return (6 - 'SABCDEF'.indexOf(m[1].toUpperCase())) * 3 + (m[2] === '+' ? 2 : m[2] === '-' ? 0 : 1);
+}
+function rankColor(r) { return RANK_COLORS[(r || '?')[0].toUpperCase()] || 'var(--sub)'; }
+function dateVal(s) { const m = /^(\d{4})\/(\d{1,2})\/(\d{1,2})/.exec(s || ''); return m ? +m[1] * 10000 + +m[2] * 100 + +m[3] : null; }
+function numVal(s) { const n = parseFloat(s); return isNaN(n) ? null : n; }
+function fmt(t) { if (!isFinite(t)) return '0:00'; t = Math.floor(t); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); }
+
+let DATA = { songs: [], columns: [], columnNotes: {} };
+let state = {
+  q: '', filters: store.get('filters', {}), sort: store.get('sort', 'ID'), desc: store.get('desc', false),
+  view: store.get('view', 'list'),
+};
+let visible = [];
+const player = { queue: [], idx: -1, song: null, file: null, shuffle: store.get('shuffle', false), repeat: store.get('repeat', 'off') };
+const audio = $('#audio');
+
+function F(s, k) { return s.fields[k] ?? ''; }
+
+async function load() {
+  try {
+    const res = await fetch('songs.json', { cache: 'no-cache' });
+    DATA = await res.json();
+  } catch (e) {
+    $('#list').innerHTML = '<div class="empty">songs.json を読み込めませんでした。<br>ローカルでは <code>python3 tools/build.py</code> を実行してから<br><code>python3 -m http.server</code> で開いてください。</div>';
+    return;
+  }
+  $('#meta').textContent = `更新: ${DATA.generated}`;
+  buildControls();
+  renderStats();
+  render();
+}
+
+function buildControls() {
+  const cols = new Set(DATA.columns);
+  $('#sort').innerHTML = SORTS.filter(s => cols.has(s[0])).map(s => `<option value="${esc(s[0])}">${esc(s[1])}</option>`).join('');
+  $('#sort').value = state.sort;
+  if (!$('#sort').value) state.sort = $('#sort').value = 'ID';
+  $('#orderBtn').textContent = state.desc ? '↓' : '↑';
+
+  const box = $('#filters');
+  box.innerHTML = '';
+  for (const col of FILTER_COLS.filter(c => cols.has(c))) {
+    const counts = {};
+    for (const s of DATA.songs) {
+      const v = F(s, col);
+      // 「灼／菓」のような複数値は分けて数える
+      for (const part of splitMulti(v)) counts[part] = (counts[part] || 0) + 1;
+    }
+    let vals = Object.keys(counts);
+    if (col === 'クオリティランク') vals.sort((a, b) => rankScore(b) - rankScore(a));
+    else vals.sort((a, b) => counts[b] - counts[a] || a.localeCompare(b, 'ja'));
+    const sel = document.createElement('select');
+    sel.dataset.col = col;
+    sel.innerHTML = `<option value="">${esc(col)}: すべて</option>` +
+      vals.map(v => `<option value="${esc(v)}">${esc(v || '(空欄)')} (${counts[v]})</option>`).join('');
+    sel.value = state.filters[col] ?? '';
+    if (sel.value !== (state.filters[col] ?? '')) delete state.filters[col];
+    sel.classList.toggle('active', !!sel.value);
+    sel.onchange = () => {
+      if (sel.value) state.filters[col] = sel.value; else delete state.filters[col];
+      sel.classList.toggle('active', !!sel.value);
+      store.set('filters', state.filters);
+      render();
+    };
+    box.appendChild(sel);
+  }
+  // 「音源あり/なし」「未登録」の絞り込み
+  const st = document.createElement('select');
+  st.dataset.col = '__status';
+  st.innerHTML = '<option value="">状態: すべて</option><option value="audio">音源あり</option><option value="noaudio">音源なし</option><option value="unreg">CSV未登録</option><option value="jacket">ジャケ絵あり</option>';
+  st.value = state.filters.__status || '';
+  st.classList.toggle('active', !!st.value);
+  st.onchange = () => {
+    if (st.value) state.filters.__status = st.value; else delete state.filters.__status;
+    st.classList.toggle('active', !!st.value);
+    store.set('filters', state.filters);
+    render();
+  };
+  box.appendChild(st);
+  $('#viewBtn').textContent = state.view === 'cards' ? '☰ リスト' : '▦ カード';
+}
+
+function splitMulti(v) { return v === '' ? [''] : v.split(/[／/、,]/).map(x => x.trim()).filter(Boolean); }
+
+function renderStats() {
+  const songs = DATA.songs;
+  const reg = songs.filter(s => s.registered);
+  const withAudio = songs.filter(s => s.audio.length).length;
+  const bpms = reg.map(s => numVal(F(s, '平均BPM'))).filter(n => n != null);
+  const avgBpm = bpms.length ? Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length) : '-';
+  const byLetter = {};
+  for (const s of reg) { const l = (F(s, 'クオリティランク') || '?')[0].toUpperCase(); byLetter[l] = (byLetter[l] || 0) + 1; }
+  const letters = 'SABCDEF'.split('').filter(l => byLetter[l]);
+  const best = reg.slice().sort((a, b) => rankScore(F(b, 'クオリティランク')) - rankScore(F(a, 'クオリティランク')))[0];
+  const dates = reg.map(s => [dateVal(F(s, '作曲日')), s]).filter(x => x[0]).sort((a, b) => b[0] - a[0]);
+  const unreg = songs.length - reg.length;
+  $('#stats').innerHTML = `
+    <div class="stat"><small>登録曲数</small><b>${reg.length}</b><small>${unreg ? `未登録の音源 ${unreg}` : `音源あり ${withAudio}`}</small></div>
+    <div class="stat"><small>ランク分布</small><b style="font-size:15px">${letters.map(l => `<span style="color:${RANK_COLORS[l]}">${l}</span>${byLetter[l]}`).join(' ')}</b>
+      <div class="rankbar">${letters.map(l => `<i style="width:${byLetter[l] / reg.length * 100}%;background:${RANK_COLORS[l]}"></i>`).join('')}</div></div>
+    <div class="stat"><small>最高ランク</small><b>${best ? esc(F(best, 'クオリティランク')) : '-'}</b><small>${best ? esc(F(best, '曲名')) : ''}</small></div>
+    <div class="stat"><small>平均BPM</small><b>${avgBpm}</b><small>${bpms.length ? `${Math.min(...bpms)}〜${Math.max(...bpms)}` : ''}</small></div>
+    <div class="stat"><small>最新作</small><b style="font-size:15px">${dates[0] ? esc(F(dates[0][1], '曲名')) : '-'}</b><small>${dates[0] ? esc(F(dates[0][1], '作曲日')) : ''}</small></div>`;
+}
+
+function matches(s) {
+  for (const [col, v] of Object.entries(state.filters)) {
+    if (col === '__status') {
+      if (v === 'audio' && !s.audio.length) return false;
+      if (v === 'noaudio' && s.audio.length) return false;
+      if (v === 'unreg' && s.registered) return false;
+      if (v === 'jacket' && !s.jacket) return false;
+      continue;
+    }
+    if (!splitMulti(F(s, col)).includes(v)) return false;
+  }
+  if (state.q) {
+    const hay = Object.values(s.fields).join(' ').toLowerCase() + ' ' + s.audio.map(a => a.file).join(' ').toLowerCase();
+    if (!state.q.toLowerCase().split(/\s+/).filter(Boolean).every(w => hay.includes(w))) return false;
+  }
+  return true;
+}
+
+function sortKey(s) {
+  const def = SORTS.find(x => x[0] === state.sort) || SORTS[0];
+  const v = F(s, def[0]);
+  switch (def[2]) {
+    case 'rank': return rankScore(v) < 0 ? null : rankScore(v);
+    case 'date': return dateVal(v);
+    case 'reading': return F(s, '読み方') || F(s, '曲名') || null;
+    default: return numVal(v);
+  }
+}
+
+function render() {
+  visible = DATA.songs.filter(matches);
+  const keyed = visible.map(s => [sortKey(s), s]);
+  keyed.sort((a, b) => {
+    // 値なし（不明など）は常に末尾
+    if (a[0] == null || b[0] == null) return (a[0] == null) - (b[0] == null) || (a[1].id ?? 1e9) - (b[1].id ?? 1e9);
+    const c = typeof a[0] === 'string' ? a[0].localeCompare(b[0], 'ja') : a[0] - b[0];
+    return (state.desc ? -c : c) || (a[1].id ?? 1e9) - (b[1].id ?? 1e9);
+  });
+  visible = keyed.map(x => x[1]);
+  $('#count').textContent = `${visible.length} / ${DATA.songs.length} 曲`;
+  const list = $('#list');
+  list.className = 'list' + (state.view === 'cards' ? ' cards' : '');
+  if (!visible.length) { list.innerHTML = '<div class="empty">条件に合う曲がありません</div>'; return; }
+  list.innerHTML = visible.map(s => {
+    const r = F(s, 'クオリティランク');
+    const playing = player.song === s;
+    const bpm = F(s, '平均BPM');
+    const meter = F(s, '平均拍子');
+    return `<div class="song${playing ? ' playing' : ''}${s.registered ? '' : ' unreg'}" data-key="${keyOf(s)}">
+      <button class="play" data-act="play" ${s.audio.length ? '' : 'disabled title="音源なし"'}>${playing && !audio.paused ? PAUSE : PLAY}</button>
+      ${thumb(s)}
+      <div class="title">
+        <div class="t"><span class="id">#${esc(s.id ?? '-')}</span>${esc(F(s, '曲名'))}</div>
+        <div class="y">${esc(F(s, '読み方'))}${s.registered ? '' : '<span class="warn">CSV未登録</span>'}</div>
+        <div class="tags">
+          ${F(s, 'モチーフキャラ') ? `<span class="tag c">${esc(F(s, 'モチーフキャラ'))}</span>` : ''}
+          ${F(s, '曲のジャンル') ? `<span class="tag">${esc(F(s, '曲のジャンル'))}</span>` : ''}
+          ${F(s, 'ゲームでのシーン例') ? `<span class="tag">${esc(F(s, 'ゲームでのシーン例'))}</span>` : ''}
+          ${s.audio.length > 1 ? `<span class="tag">${s.audio.length}バージョン</span>` : ''}
+        </div>
+      </div>
+      <div class="right">
+        <div class="num">${bpm ? `<b>${esc(bpm)}</b> BPM` : ''}${meter ? `<br>${esc(meter)}` : ''}</div>
+        <div class="num">${esc(F(s, '作曲日') || '')}</div>
+        ${r ? `<div class="rank" style="background:${rankColor(r)}">${esc(r)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function keyOf(s) { return DATA.songs.indexOf(s); }
+function thumb(s, cls = 'thumb') {
+  return s.jacket
+    ? `<img class="${cls}" src="${url(s.jacket)}" alt="" loading="lazy">`
+    : `<div class="${cls}" style="color:${rankColor(F(s, 'クオリティランク'))}">${esc((F(s, '曲名') || '♪').slice(0, 2))}</div>`;
+}
+
+function openDetail(s) {
+  const d = $('#drawer');
+  const skip = new Set(['曲名', '読み方', '備考']);
+  const notes = DATA.columnNotes || {};
+  const cols = DATA.columns.length ? DATA.columns : Object.keys(s.fields);
+  d.innerHTML = `
+    <button class="iconbtn close" id="closeBtn">✕</button>
+    <div class="y">#${esc(s.id ?? '-')}</div>
+    <h2>${esc(F(s, '曲名'))}</h2>
+    <div class="y">${esc(F(s, '読み方'))}</div>
+    ${s.jacket ? `<img class="jacket" src="${url(s.jacket)}" alt="ジャケ絵">` : ''}
+    ${s.registered ? '' : '<p class="warn">この音源はまだCSVに登録されていません。CSVにID・曲名の行を追加してください。</p>'}
+    <div class="versions">
+      ${s.audio.length ? s.audio.map(a => `
+        <div class="ver">
+          <button class="play" data-file="${esc(a.file)}">${player.file === a.file && !audio.paused ? PAUSE : PLAY}</button>
+          <b>${a.version ? 'V' + esc(a.version) : esc(a.format.toUpperCase())}</b>
+          <span>${esc(a.file)} · ${(a.size / 1024 / 1024).toFixed(2)}MB</span>
+          <a href="${url(a.file)}" download>DL</a>
+        </div>`).join('') : '<p class="warn">音源ファイルがありません</p>'}
+    </div>
+    ${F(s, '備考') ? `<div class="note">${esc(F(s, '備考'))}</div>` : ''}
+    <dl>${cols.filter(c => !skip.has(c) && c in s.fields).map(c => `<dt${notes[c] ? ` title="${esc(notes[c])}"` : ''}>${esc(c)}</dt><dd>${esc(F(s, c) || '—')}</dd>`).join('')}</dl>`;
+  d.querySelectorAll('.ver .play').forEach(b => b.onclick = () => {
+    const a = s.audio.find(x => x.file === b.dataset.file);
+    if (player.file === a.file) togglePlay(); else playSong(s, a);
+  });
+  $('#closeBtn').onclick = closeDetail;
+  d.classList.add('open'); d.setAttribute('aria-hidden', 'false');
+  $('#overlay').classList.add('open');
+  history.replaceState(null, '', '#' + (s.id ?? ''));
+}
+function closeDetail() {
+  $('#drawer').classList.remove('open'); $('#drawer').setAttribute('aria-hidden', 'true');
+  $('#overlay').classList.remove('open');
+  history.replaceState(null, '', location.pathname + location.search);
+}
+
+// ---- player ----
+function playSong(s, a, fromQueue) {
+  if (!s.audio.length) return;
+  a = a || s.audio[0];
+  if (!fromQueue) {
+    player.queue = visible.filter(x => x.audio.length);
+    if (!player.queue.includes(s)) player.queue = [s];
+    if (player.shuffle) shuffleQueue(s);
+    player.idx = player.queue.indexOf(s);
+  }
+  player.song = s; player.file = a.file;
+  audio.src = url(a.file);
+  audio.play().catch(() => {});
+  $('#now').innerHTML = `${thumb(s)}<div><div class="t">${esc(F(s, '曲名'))}${a.version ? ` <small>V${esc(a.version)}</small>` : ''}</div><div class="y">${esc([F(s, 'モチーフキャラ'), F(s, '曲のジャンル')].filter(Boolean).join(' · '))}</div></div>`;
+  $('#now').onclick = () => openDetail(s);
+  document.title = `▶ ${F(s, '曲名')} - Lencie 自作曲DB`;
+}
+function shuffleQueue(first) {
+  const q = player.queue.filter(x => x !== first);
+  for (let i = q.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [q[i], q[j]] = [q[j], q[i]]; }
+  player.queue = first ? [first, ...q] : q;
+}
+function step(dir) {
+  if (!player.queue.length) { if (visible.length) playSong(visible.find(s => s.audio.length)); return; }
+  let i = player.idx + dir;
+  if (i >= player.queue.length) { if (player.repeat !== 'all') { audio.pause(); return; } i = 0; }
+  if (i < 0) i = player.queue.length - 1;
+  player.idx = i;
+  playSong(player.queue[i], null, true);
+}
+function togglePlay() {
+  if (!audio.src) { step(1); return; }
+  audio.paused ? audio.play() : audio.pause();
+}
+function syncButtons() {
+  $('#mainBtn').innerHTML = audio.paused ? PLAY : PAUSE;
+  $('#shufBtn').classList.toggle('on', player.shuffle);
+  $('#repBtn').classList.toggle('on', player.repeat !== 'off');
+  $('#repBtn').title = { off: 'リピート: オフ', all: 'リピート: 全曲', one: 'リピート: 1曲' }[player.repeat];
+  $('#repBtn').style.position = 'relative';
+  $('#repBtn').dataset.one = player.repeat === 'one' ? '1' : '';
+  document.querySelectorAll('.song').forEach(el => {
+    const s = DATA.songs[+el.dataset.key];
+    el.classList.toggle('playing', s === player.song);
+    const b = el.querySelector('.play');
+    if (s.audio.length) b.innerHTML = s === player.song && !audio.paused ? PAUSE : PLAY;
+  });
+  document.querySelectorAll('.ver .play').forEach(b => b.innerHTML = b.dataset.file === player.file && !audio.paused ? PAUSE : PLAY);
+}
+audio.addEventListener('play', syncButtons);
+audio.addEventListener('pause', syncButtons);
+audio.addEventListener('loadedmetadata', () => $('#dur').textContent = fmt(audio.duration));
+audio.addEventListener('timeupdate', () => {
+  $('#cur').textContent = fmt(audio.currentTime);
+  if (!seeking && audio.duration) $('#seek').value = audio.currentTime / audio.duration * 1000;
+});
+audio.addEventListener('ended', () => {
+  if (player.repeat === 'one') { audio.currentTime = 0; audio.play(); } else step(1);
+});
+let seeking = false;
+$('#seek').addEventListener('input', () => { seeking = true; $('#cur').textContent = fmt($('#seek').value / 1000 * audio.duration); });
+$('#seek').addEventListener('change', () => { if (audio.duration) audio.currentTime = $('#seek').value / 1000 * audio.duration; seeking = false; });
+$('#vol').value = store.get('vol', 0.8); audio.volume = +$('#vol').value;
+$('#vol').addEventListener('input', () => { audio.volume = +$('#vol').value; store.set('vol', audio.volume); });
+$('#mainBtn').onclick = togglePlay;
+$('#nextBtn').onclick = () => step(1);
+$('#prevBtn').onclick = () => { if (audio.currentTime > 3) audio.currentTime = 0; else step(-1); };
+$('#shufBtn').onclick = () => {
+  player.shuffle = !player.shuffle; store.set('shuffle', player.shuffle);
+  if (player.song) {
+    if (player.shuffle) shuffleQueue(player.song);
+    else player.queue = visible.filter(x => x.audio.length);
+    player.idx = Math.max(0, player.queue.indexOf(player.song));
+  }
+  syncButtons();
+};
+$('#repBtn').onclick = () => {
+  player.repeat = { off: 'all', all: 'one', one: 'off' }[player.repeat]; store.set('repeat', player.repeat); syncButtons();
+};
+
+// ---- UI events ----
+$('#list').addEventListener('click', e => {
+  const row = e.target.closest('.song'); if (!row) return;
+  const s = DATA.songs[+row.dataset.key];
+  if (e.target.closest('[data-act=play]')) { if (player.song === s) togglePlay(); else playSong(s); return; }
+  openDetail(s);
+});
+$('#overlay').onclick = closeDetail;
+let qTimer;
+$('#q').addEventListener('input', () => { clearTimeout(qTimer); qTimer = setTimeout(() => { state.q = $('#q').value.trim(); render(); }, 120); });
+$('#sort').onchange = () => { state.sort = $('#sort').value; store.set('sort', state.sort); render(); };
+$('#orderBtn').onclick = () => { state.desc = !state.desc; store.set('desc', state.desc); $('#orderBtn').textContent = state.desc ? '↓' : '↑'; render(); };
+$('#viewBtn').onclick = () => { state.view = state.view === 'cards' ? 'list' : 'cards'; store.set('view', state.view); $('#viewBtn').textContent = state.view === 'cards' ? '☰ リスト' : '▦ カード'; render(); };
+$('#resetBtn').onclick = () => { state.filters = {}; state.q = ''; $('#q').value = ''; store.set('filters', {}); buildControls(); render(); };
+$('#playAllBtn').onclick = () => { const s = visible.find(x => x.audio.length); if (s) playSong(s); };
+$('#themeBtn').onclick = () => {
+  const cur = document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next; store.set('theme', next);
+};
+const savedTheme = store.get('theme', null); if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input, select, textarea')) { if (e.key === 'Escape') e.target.blur(); return; }
+  if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+  else if (e.key === '/') { e.preventDefault(); $('#q').focus(); }
+  else if (e.key === 'Escape') closeDetail();
+  else if (e.key === 'ArrowRight' && e.shiftKey) step(1);
+  else if (e.key === 'ArrowLeft' && e.shiftKey) step(-1);
+});
+syncButtons();
+load().then(() => {
+  const id = location.hash.slice(1);
+  const s = id && DATA.songs.find(x => String(x.id) === id);
+  if (s) openDetail(s);
+});
+</script>
+</body>
+</html>
